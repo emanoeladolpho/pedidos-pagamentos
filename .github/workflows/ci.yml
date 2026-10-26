@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, testes e cobertura
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # verify executa, em cada módulo: testes unitários e de arquitetura (Surefire), testes de contrato (Pact),
+      # integração com Testcontainers e o teste ponta a ponta (Failsafe) e a verificação de cobertura (JaCoCo ≥ 80%).
+      # O runner ubuntu-latest já tem Docker para os containers de teste.
+      - name: Build e testes
+        run: ./mvnw -B verify
+
+      # Os consumidores regeneram os contratos durante o build; se mudaram, o contrato versionado está desatualizado
+      - name: Verificar se os contratos Pact estão atualizados
+        run: |
+          if ! git diff --exit-code -- contracts/pacts; then
+            echo "::error::Os contratos em contracts/pacts mudaram. Rode ./mvnw verify localmente e versione os arquivos."
+            exit 1
+          fi
+
+      - name: Resumo da cobertura
+        if: always()
+        run: |
+          echo "### Cobertura de linhas (JaCoCo)" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Módulo | Cobertura |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          for csv in */target/site/jacoco/jacoco.csv; do
+            [ -f "$csv" ] || continue
+            awk -F, -v m="${csv%%/*}" 'NR>1{x+=$8;c+=$9} END{if (x+c>0) printf "| %s | %.1f%% |\n", m, 100*c/(x+c)}' "$csv" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Publicar relatórios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-de-teste
+          path: |
+            */target/surefire-reports/
+            */target/failsafe-reports/
+            */target/site/jacoco/
+          retention-days: 7
+
+  docker:
+    name: Imagem ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        service: [order-service, payment-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          push: false
+          tags: pedidos-pagamentos/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  compose:
+    name: Validar docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose config
+        run: |
+          cp .env.example .env
+          docker compose config -q
