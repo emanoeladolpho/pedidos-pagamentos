@@ -1,0 +1,36 @@
+# Tabelas de infraestrutura do chassis. Cada serviço inclui este changelog no seu próprio banco.
+databaseChangeLog:
+  - changeSet:
+      id: chassis-001-outbox-events
+      author: emanoeladolpho
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column: { name: id, type: UUID, constraints: { primaryKey: true } }
+              - column: { name: event_type, type: VARCHAR(100), constraints: { nullable: false } }
+              - column: { name: topic, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: message_key, type: VARCHAR(100), constraints: { nullable: false } }
+              - column: { name: payload, type: JSONB, constraints: { nullable: false } }
+              - column: { name: correlation_id, type: VARCHAR(64) }
+              - column: { name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: { nullable: false } }
+              - column: { name: published_at, type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: attempts, type: INT, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: last_error, type: VARCHAR(1000) }
+        - sql:
+            comment: Índice parcial só com os pendentes, mantendo a varredura do relay rápida mesmo com histórico grande
+            sql: CREATE INDEX ix_outbox_events_pending ON outbox_events (created_at) WHERE published_at IS NULL
+  - changeSet:
+      id: chassis-002-processed-events
+      author: emanoeladolpho
+      changes:
+        - createTable:
+            tableName: processed_events
+            columns:
+              - column: { name: event_id, type: UUID, constraints: { nullable: false } }
+              - column: { name: consumer, type: VARCHAR(100), constraints: { nullable: false } }
+              - column: { name: processed_at, type: TIMESTAMP WITH TIME ZONE, constraints: { nullable: false } }
+        - addPrimaryKey:
+            tableName: processed_events
+            columnNames: event_id, consumer
+            constraintName: pk_processed_events

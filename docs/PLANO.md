@@ -3,6 +3,9 @@
 Plataforma de pedidos e pagamentos com dois serviços independentes (`order-service` e `payment-service`),
 Arquitetura Hexagonal, DDD tático e comunicação assíncrona via Kafka.
 
+> Ordem ajustada durante a execução: a mensageria veio antes da API REST, porque os casos de uso só podem
+> ser montados no Spring quando as portas de saída (outbox e inbox) já têm implementação.
+
 Cada fase termina com **build verde** (`./mvnw verify`) e um ou mais commits (conventional commits).
 
 ---
@@ -28,7 +31,7 @@ pedidos-pagamentos/
 4. `payment-service` chama o gateway simulado (Resilience4j: timeout, retry, circuit breaker).
    - aprovado → `PaymentApproved` → pedido `PAID`
    - recusado → `PaymentDeclined` → pedido `FAILED`
-   - gateway indisponível após as tentativas → mensagem vai para a **DLQ** (`order-events.DLT`)
+   - gateway indisponível após as tentativas → mensagem vai para a **DLQ** (`order-events-dlt`)
 5. Cancelamento: `POST /orders/{id}/cancel` → `CANCELLED` + `OrderCancelled`; se o pagamento estava aprovado,
    o `payment-service` estorna e publica `PaymentRefunded`.
 
@@ -73,16 +76,16 @@ Pagamento:  PENDING → APPROVED → REFUNDED
 - `UnitOfWork` implementado com `TransactionTemplate`.
 - Testes de integração com Testcontainers (PostgreSQL).
 
-### Fase 4 — API REST
-- Controllers (adapters de entrada), DTOs, validação, `ProblemDetail` (RFC 7807/9457), OpenAPI.
-- `Idempotency-Key` obrigatório na criação de pedido (replay devolve a mesma resposta; payload diferente → 422).
-
-### Fase 5 — Mensageria
+### Fase 4 — Mensageria
 - `service-chassis`: Transactional Outbox (tabela + relay com `FOR UPDATE SKIP LOCKED`) e inbox de eventos processados.
 - Produtores/consumidores Kafka, envelope de evento versionado, chave de partição = id do pedido.
 - Consumidores idempotentes; `DefaultErrorHandler` com backoff e Dead Letter Topic.
 - **Testes de contrato** com Pact (mensagens) entre os serviços.
 - Testes de integração com Testcontainers (PostgreSQL + Kafka).
+
+### Fase 5 — API REST
+- Controllers (adapters de entrada), DTOs, validação, `ProblemDetail` (RFC 7807/9457), OpenAPI.
+- `Idempotency-Key` obrigatório na criação de pedido (replay devolve a mesma resposta; payload diferente → 422).
 
 ### Fase 6 — Segurança
 - Keycloak (realm importado no compose), resource server JWT, roles `USER`/`ADMIN` a partir de `realm_access.roles`.
