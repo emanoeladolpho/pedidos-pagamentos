@@ -86,9 +86,12 @@ Pagamento:  PENDING → APPROVED → REFUNDED
 ### Fase 5 — API REST
 - Controllers (adapters de entrada), DTOs, validação, `ProblemDetail` (RFC 7807/9457), OpenAPI.
 - `Idempotency-Key` obrigatório na criação de pedido (replay devolve a mesma resposta; payload diferente → 422).
+- O resource server JWT (`SecurityFilterChain`) entra já nesta fase: os controllers precisam do solicitante
+  autenticado para aplicar as regras de propriedade dos pedidos.
 
 ### Fase 6 — Segurança
-- Keycloak (realm importado no compose), resource server JWT, roles `USER`/`ADMIN` a partir de `realm_access.roles`.
+- Keycloak (realm importado no compose) e teste das roles `USER`/`ADMIN` (a partir de `realm_access.roles`)
+  com tokens reais.
 - Regras: usuário vê/cancela só os próprios pedidos; estorno manual só ADMIN.
 
 ### Fase 7 — Resiliência

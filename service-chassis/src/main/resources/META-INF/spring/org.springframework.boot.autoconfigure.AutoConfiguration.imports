@@ -1,1 +1,2 @@
-io.github.emanoeladolpho.chassis.ChassisAutoConfiguration
+io.github.emanoeladolpho.chassis.ChassisMessagingAutoConfiguration
+io.github.emanoeladolpho.chassis.ChassisWebAutoConfiguration

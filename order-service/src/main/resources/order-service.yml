@@ -24,6 +24,17 @@ spring:
       group-id: order-service
       auto-offset-reset: earliest
 
+chassis:
+  security:
+    # Endereço interno de onde o serviço baixa as chaves públicas do Keycloak
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/pedidos/protocol/openid-connect/certs}
+    # Emissor esperado no token (endereço público pelo qual o cliente obteve o token)
+    issuer: ${KEYCLOAK_ISSUER:http://localhost:8080/realms/pedidos}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
 app:
   kafka:
     partitions: 3

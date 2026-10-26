@@ -36,6 +36,10 @@ class BaseExceptionHandlerTest {
         void validated(@Valid @RequestBody Body body) {
         }
 
+        @PostMapping("/mixed/{value}")
+        void mixed(@PathVariable @Min(10) int value, @Valid @RequestBody Body body) {
+        }
+
         @GetMapping("/params/{value}")
         void params(@PathVariable @Min(10) int value) {
         }
@@ -80,7 +84,16 @@ class BaseExceptionHandlerTest {
     void invalidParameterShouldReturn400() throws Exception {
         mvc.perform(get("/params/1"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").value("value"));
+    }
+
+    @Test
+    void bodyErrorsShouldBeListedAlsoWhenTheMethodHasParameterConstraints() throws Exception {
+        mvc.perform(post("/mixed/20").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").value("name"));
     }
 
     @Test

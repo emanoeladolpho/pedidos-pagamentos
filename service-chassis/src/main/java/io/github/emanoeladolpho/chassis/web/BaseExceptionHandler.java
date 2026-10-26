@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -38,20 +39,38 @@ public class BaseExceptionHandler extends ResponseEntityExceptionHandler {
                                                                   HttpHeaders headers, HttpStatusCode status,
                                                                   WebRequest request) {
         List<Map<String, String>> errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> Map.of("field", error.getField(), "message", String.valueOf(error.getDefaultMessage())))
+                .map(error -> fieldError(error.getField(), error.getDefaultMessage()))
                 .toList();
-        ProblemDetail body = ProblemDetails.of(HttpStatus.BAD_REQUEST, "Requisição inválida",
-                "Um ou mais campos estão inválidos", "VALIDATION_ERROR");
-        body.setProperty("errors", errors);
-        return ResponseEntity.badRequest().body(body);
+        return ResponseEntity.badRequest().body(validationProblem(errors));
     }
 
+    /**
+     * Lançada quando o método do controller tem restrições em parâmetros (header, path, query): nesse caso o
+     * Spring valida também o corpo {@code @Valid} por aqui, e os erros de campo chegam dentro dos resultados.
+     */
     @Override
     protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
                                                                             HttpHeaders headers, HttpStatusCode status,
                                                                             WebRequest request) {
-        return ResponseEntity.badRequest().body(ProblemDetails.of(HttpStatus.BAD_REQUEST, "Requisição inválida",
-                "Parâmetros inválidos", "VALIDATION_ERROR"));
+        List<Map<String, String>> errors = ex.getParameterValidationResults().stream()
+                .flatMap(result -> result.getResolvableErrors().stream().map(error -> fieldError(
+                        error instanceof FieldError fieldError
+                                ? fieldError.getField()
+                                : result.getMethodParameter().getParameterName(),
+                        error.getDefaultMessage())))
+                .toList();
+        return ResponseEntity.badRequest().body(validationProblem(errors));
+    }
+
+    private static Map<String, String> fieldError(String field, String message) {
+        return Map.of("field", String.valueOf(field), "message", String.valueOf(message));
+    }
+
+    private static ProblemDetail validationProblem(List<Map<String, String>> errors) {
+        ProblemDetail body = ProblemDetails.of(HttpStatus.BAD_REQUEST, "Requisição inválida",
+                "Um ou mais campos estão inválidos", "VALIDATION_ERROR");
+        body.setProperty("errors", errors);
+        return body;
     }
 
     @ExceptionHandler(MissingRequestHeaderException.class)
