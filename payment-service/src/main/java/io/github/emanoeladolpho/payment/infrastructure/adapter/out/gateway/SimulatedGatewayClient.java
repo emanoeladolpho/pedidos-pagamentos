@@ -13,7 +13,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * centavos <b>.13</b> → recusa; centavos <b>.66</b> → falha técnica.
  * Além disso, as taxas aleatórias configuradas simulam instabilidade.
  * <p>
- * A cobrança é idempotente pela chave (id do pagamento): repetir a chamada devolve o resultado original.
+ * Cobrança e estorno são idempotentes (pelo id do pagamento e pelo id da transação, respectivamente):
+ * repetir a chamada devolve o resultado original, o que torna o retry seguro.
  */
 public class SimulatedGatewayClient {
 
@@ -21,14 +22,15 @@ public class SimulatedGatewayClient {
     }
 
     private final SimulatedGatewayProperties properties;
-    private final Map<String, ChargeResponse> chargesByIdempotencyKey = new ConcurrentHashMap<>();
+    private final Map<String, ChargeResponse> charges = new ConcurrentHashMap<>();
+    private final Map<String, ChargeResponse> refunds = new ConcurrentHashMap<>();
 
     public SimulatedGatewayClient(SimulatedGatewayProperties properties) {
         this.properties = properties;
     }
 
     public ChargeResponse charge(String idempotencyKey, BigDecimal amount) {
-        ChargeResponse previous = chargesByIdempotencyKey.get(idempotencyKey);
+        ChargeResponse previous = charges.get(idempotencyKey);
         if (previous != null) {
             return previous;
         }
@@ -36,13 +38,19 @@ public class SimulatedGatewayClient {
         ChargeResponse response = cents(amount) == 13 || random() < properties.declineRate()
                 ? new ChargeResponse(false, null, "Pagamento recusado pelo emissor")
                 : new ChargeResponse(true, "gw-" + UUID.randomUUID(), null);
-        chargesByIdempotencyKey.put(idempotencyKey, response);
+        charges.put(idempotencyKey, response);
         return response;
     }
 
     public ChargeResponse refund(String transactionId, BigDecimal amount) {
+        ChargeResponse previous = refunds.get(transactionId);
+        if (previous != null) {
+            return previous;
+        }
         simulateNetwork(amount);
-        return new ChargeResponse(true, "rf-" + UUID.randomUUID(), null);
+        ChargeResponse response = new ChargeResponse(true, "rf-" + UUID.randomUUID(), null);
+        refunds.put(transactionId, response);
+        return response;
     }
 
     private void simulateNetwork(BigDecimal amount) {

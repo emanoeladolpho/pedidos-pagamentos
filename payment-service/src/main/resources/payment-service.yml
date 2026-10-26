@@ -46,3 +46,36 @@ app:
       latency: ${GATEWAY_LATENCY:50ms}
       failure-rate: ${GATEWAY_FAILURE_RATE:0}
       decline-rate: ${GATEWAY_DECLINE_RATE:0}
+
+# Políticas do gateway de pagamento: retry( circuitBreaker( timeLimiter( chamada ) ) )
+resilience4j:
+  timelimiter:
+    instances:
+      payment-gateway:
+        timeout-duration: ${GATEWAY_TIMEOUT:2s}
+        cancel-running-future: true
+  retry:
+    instances:
+      payment-gateway:
+        max-attempts: ${GATEWAY_RETRY_MAX_ATTEMPTS:3}
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - io.github.emanoeladolpho.payment.infrastructure.adapter.out.gateway.GatewayTechnicalException
+          - java.util.concurrent.TimeoutException
+  circuitbreaker:
+    instances:
+      payment-gateway:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: ${GATEWAY_TIMEOUT:2s}
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - io.github.emanoeladolpho.payment.infrastructure.adapter.out.gateway.GatewayTechnicalException
+          - java.util.concurrent.TimeoutException
