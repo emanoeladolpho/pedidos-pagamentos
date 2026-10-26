@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       file: 001-create-payments.yaml
       relativeToChangelogFile: true
+  # Tabelas de outbox e inbox fornecidas pelo service-chassis
+  - include:
+      file: db/changelog/chassis/001-outbox-and-inbox.yaml

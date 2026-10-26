@@ -6,7 +6,9 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
+import static com.tngtech.archunit.base.DescribedPredicate.alwaysTrue;
 import static com.tngtech.archunit.base.DescribedPredicate.describe;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.onionArchitecture;
@@ -32,7 +34,9 @@ class HexagonalArchitectureTest {
             .adapter("persistence", "..payment.infrastructure.adapter.out.persistence..")
             .adapter("messaging-out", "..payment.infrastructure.adapter.out.messaging..")
             .adapter("gateway", "..payment.infrastructure.adapter.out.gateway..")
-            .withOptionalLayers(true);
+            .withOptionalLayers(true)
+            // infrastructure.config é o composition root: instancia os casos de uso e liga as portas aos adapters
+            .ignoreDependency(resideInAPackage("..payment.infrastructure.config.."), alwaysTrue());
 
     @ArchTest
     static final ArchRule domainIsFrameworkFree = noClasses()
