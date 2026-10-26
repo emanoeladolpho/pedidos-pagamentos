@@ -23,6 +23,11 @@ spring:
     consumer:
       group-id: payment-service
       auto-offset-reset: earliest
+      properties:
+        # Tópicos são criados pelo KafkaAdmin com as partições corretas, nunca implicitamente pelo consumidor
+        allow.auto.create.topics: false
+        # Descobre novas partições em até 30s (padrão: 5 min)
+        metadata.max.age.ms: 30000
 
 chassis:
   security:

@@ -7,7 +7,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 
-/** Tópicos de que este serviço é dono: o que ele publica e a DLT do que ele consome. */
+/**
+ * Declara, com a mesma especificação nos dois serviços, todos os tópicos que este serviço usa: o que publica,
+ * o que consome e a DLT do que consome. Assim, qualquer que seja a ordem de inicialização, o tópico nasce com o
+ * número correto de partições (o consumidor nunca o cria com o padrão do broker, ver allow.auto.create.topics).
+ */
 @Configuration(proxyBeanMethods = false)
 class KafkaTopicsConfiguration {
 
@@ -17,6 +21,7 @@ class KafkaTopicsConfiguration {
                                             @Value("${app.kafka.partitions:3}") int partitions) {
         return new KafkaAdmin.NewTopics(
                 TopicBuilder.name(orderEvents).partitions(partitions).build(),
+                TopicBuilder.name(paymentEvents).partitions(partitions).build(),
                 TopicBuilder.name(DeadLetterTopics.of(paymentEvents)).partitions(partitions).build());
     }
 }
