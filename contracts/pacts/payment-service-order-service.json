@@ -1,0 +1,143 @@
+{
+  "consumer": {
+    "name": "payment-service"
+  },
+  "messages": [
+    {
+      "contents": {
+        "data": {
+          "orderId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "reason": "Desist\u00EAncia"
+        },
+        "eventId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+        "eventType": "OrderCancelled",
+        "eventVersion": 1
+      },
+      "description": "an OrderCancelled event",
+      "matchingRules": {
+        "body": {
+          "$.data.orderId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.reason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventVersion": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metaData": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "contents": {
+        "data": {
+          "currency": "BRL",
+          "customerId": "customer-1",
+          "orderId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "totalAmount": 199.9
+        },
+        "eventId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+        "eventType": "OrderCreated",
+        "eventVersion": 1
+      },
+      "description": "an OrderCreated event",
+      "matchingRules": {
+        "body": {
+          "$.data.currency": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[A-Z]{3}"
+              }
+            ]
+          },
+          "$.data.customerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.orderId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.totalAmount": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventVersion": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metaData": {
+        "contentType": "application/json"
+      }
+    }
+  ],
+  "metadata": {
+    "pact-jvm": {
+      "version": "4.6.21"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "order-service"
+  }
+}

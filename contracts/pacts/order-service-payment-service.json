@@ -1,0 +1,252 @@
+{
+  "consumer": {
+    "name": "order-service"
+  },
+  "messages": [
+    {
+      "contents": {
+        "data": {
+          "orderId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "paymentId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f"
+        },
+        "eventId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+        "eventType": "PaymentApproved",
+        "eventVersion": 1
+      },
+      "description": "a PaymentApproved event",
+      "matchingRules": {
+        "body": {
+          "$.data.orderId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventVersion": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metaData": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "contents": {
+        "data": {
+          "orderId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "paymentId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "reason": "Pagamento recusado pelo emissor"
+        },
+        "eventId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+        "eventType": "PaymentDeclined",
+        "eventVersion": 1
+      },
+      "description": "a PaymentDeclined event",
+      "matchingRules": {
+        "body": {
+          "$.data.orderId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.reason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventVersion": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metaData": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "contents": {
+        "data": {
+          "orderId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "paymentId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f"
+        },
+        "eventId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+        "eventType": "PaymentInitiated",
+        "eventVersion": 1
+      },
+      "description": "a PaymentInitiated event",
+      "matchingRules": {
+        "body": {
+          "$.data.orderId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventVersion": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metaData": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "contents": {
+        "data": {
+          "orderId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "paymentId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+          "reason": "Pagamento recusado pelo emissor"
+        },
+        "eventId": "3f1c9a52-8d4e-4b7a-9c2f-1a2b3c4d5e6f",
+        "eventType": "PaymentRefunded",
+        "eventVersion": 1
+      },
+      "description": "a PaymentRefunded event",
+      "matchingRules": {
+        "body": {
+          "$.data.orderId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.data.reason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              }
+            ]
+          },
+          "$.eventVersion": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metaData": {
+        "contentType": "application/json"
+      }
+    }
+  ],
+  "metadata": {
+    "pact-jvm": {
+      "version": "4.6.21"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "payment-service"
+  }
+}
