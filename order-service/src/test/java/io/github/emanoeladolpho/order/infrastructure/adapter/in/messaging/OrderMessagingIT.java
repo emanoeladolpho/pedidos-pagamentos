@@ -13,7 +13,13 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -34,9 +40,10 @@ import static org.awaitility.Awaitility.await;
  * Fluxo de mensageria do order-service com PostgreSQL e Kafka reais:
  * outbox → Kafka, consumo idempotente dos eventos de pagamento e Dead Letter Topic.
  */
-@SpringBootTest(properties = {"spring.config.name=order-service", "chassis.outbox.poll-interval=100ms",
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"spring.config.name=order-service", "chassis.outbox.poll-interval=100ms",
         "chassis.consumer.max-retries=1", "chassis.consumer.initial-backoff=100ms"})
 @Import(TestcontainersConfiguration.class)
+@AutoConfigureObservability
 class OrderMessagingIT {
 
     @Autowired
@@ -51,6 +58,8 @@ class OrderMessagingIT {
     private JdbcTemplate jdbc;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private TestRestTemplate http;
 
     @AfterEach
     void clearMdc() {
@@ -148,5 +157,24 @@ class OrderMessagingIT {
         ConsumerRecord<String, String> dead = awaitRecord(consumerFactory, "payment-events-dlt",
                 r -> key.equals(r.key()));
         assertThat(header(dead, "kafka_dlt-exception-message")).contains("Pedido não encontrado");
+    }
+
+    @Test
+    void probesAndMetricsShouldBePublicAndErrorsShouldCarryTheCorrelationId() throws Exception {
+        assertThat(http.getForEntity("/actuator/health/liveness", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(http.getForEntity("/actuator/health/readiness", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        var headers = new HttpHeaders();
+        headers.set("X-Correlation-Id", "corr-obs-1");
+        var unauthorized = http.exchange("/orders", HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        assertThat(unauthorized.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(unauthorized.getHeaders().getFirst("X-Correlation-Id")).isEqualTo("corr-obs-1");
+        assertThat(objectMapper.readTree(unauthorized.getBody()).get("correlationId").asText()).isEqualTo("corr-obs-1");
+
+        String metrics = http.getForObject("/actuator/prometheus", String.class);
+        assertThat(metrics)
+                .contains("application=\"order-service\"")
+                .contains("http_server_requests_seconds_bucket")
+                .contains("outbox_pending_events");
     }
 }

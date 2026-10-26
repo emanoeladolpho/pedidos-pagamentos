@@ -105,6 +105,20 @@ class BaseExceptionHandlerTest {
     }
 
     @Test
+    void errorsHandledByTheFrameworkShouldAlsoCarryCodeAndCorrelationId() throws Exception {
+        CorrelationId.set("corr-fw");
+
+        mvc.perform(post("/validated").contentType(MediaType.APPLICATION_JSON).content("{json quebrado"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.correlationId").value("corr-fw"));
+        mvc.perform(get("/validated"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
     void exceptionsShouldBeMappedToStableCodes() throws Exception {
         mvc.perform(get("/fail/illegal")).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_ARGUMENT"))

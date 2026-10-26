@@ -62,6 +62,22 @@ public class BaseExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(validationProblem(errors));
     }
 
+    /**
+     * Erros que o próprio Spring MVC trata (rota inexistente, método não suportado, JSON ilegível...) também
+     * recebem code, timestamp e correlationId, para que todas as respostas de erro tenham o mesmo formato.
+     */
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
+                                                             HttpStatusCode statusCode, WebRequest request) {
+        ResponseEntity<Object> response = super.handleExceptionInternal(ex, body, headers, statusCode, request);
+        if (response != null && response.getBody() instanceof ProblemDetail problem
+                && (problem.getProperties() == null || !problem.getProperties().containsKey("code"))) {
+            HttpStatus status = HttpStatus.resolve(statusCode.value());
+            ProblemDetails.enrich(problem, status == null ? "HTTP_" + statusCode.value() : status.name());
+        }
+        return response;
+    }
+
     private static Map<String, String> fieldError(String field, String message) {
         return Map.of("field", String.valueOf(field), "message", String.valueOf(message));
     }

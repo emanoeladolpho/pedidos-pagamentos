@@ -41,3 +41,35 @@ app:
     topics:
       order-events: order-events
       payment-events: payment-events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms,300ms,1s
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+
+logging:
+  # Em texto (desenvolvimento local) o correlation id aparece em cada linha. Nos containers o formato é JSON
+  # (LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs no Dockerfile) e o MDC entra como campo do documento.
+  pattern:
+    correlation: "[%X{correlationId:-}] "
