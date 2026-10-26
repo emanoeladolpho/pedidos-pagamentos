@@ -1,0 +1,48 @@
+{
+  "realm": "pedidos",
+  "enabled": true,
+  "displayName": "Pedidos e Pagamentos",
+  "sslRequired": "none",
+  "accessTokenLifespan": 900,
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "USER", "description": "Cliente: cria, consulta e cancela os próprios pedidos" },
+      { "name": "ADMIN", "description": "Operação: vê todos os pedidos e faz estornos manuais" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "pedidos-api",
+      "name": "Pedidos API (cliente de demonstração)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:8081/*", "http://localhost:8082/*"],
+      "webOrigins": ["+"]
+    }
+  ],
+  "users": [
+    {
+      "username": "cliente",
+      "email": "cliente@pedidos.local",
+      "firstName": "Cliente",
+      "lastName": "Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": ["USER"],
+      "credentials": [{ "type": "password", "value": "${KC_DEMO_USER_PASSWORD}", "temporary": false }]
+    },
+    {
+      "username": "admin",
+      "email": "admin@pedidos.local",
+      "firstName": "Admin",
+      "lastName": "Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": ["USER", "ADMIN"],
+      "credentials": [{ "type": "password", "value": "${KC_DEMO_ADMIN_PASSWORD}", "temporary": false }]
+    }
+  ]
+}
