@@ -1,0 +1,147 @@
+# Sobe a plataforma completa com um comando:  cp .env.example .env && docker compose up -d --build
+#
+#   order-service    http://localhost:8081/swagger-ui.html
+#   payment-service  http://localhost:8082/swagger-ui.html
+#   Keycloak         http://localhost:8080   (realm "pedidos"; porta configurável em KEYCLOAK_PORT)
+#   Prometheus       http://localhost:9090
+#   Grafana          http://localhost:3000   (dashboard "Pedidos e Pagamentos")
+
+name: pedidos-pagamentos
+
+services:
+  orders-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: ${ORDERS_DB_USER:?defina ORDERS_DB_USER no .env}
+      POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:?defina ORDERS_DB_PASSWORD no .env}
+    ports: ["5433:5432"]
+    volumes: [orders-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  payments-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_USER: ${PAYMENTS_DB_USER:?defina PAYMENTS_DB_USER no .env}
+      POSTGRES_PASSWORD: ${PAYMENTS_DB_PASSWORD:?defina PAYMENTS_DB_PASSWORD no .env}
+    ports: ["5434:5432"]
+    volumes: [payments-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d payments"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      # Containers usam kafka:9092; aplicações rodando no host usam localhost:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Tópicos são criados pelos serviços (KafkaAdmin) com as partições corretas
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    ports: ["9094:9094"]
+    volumes: [kafka-data:/var/lib/kafka/data]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:?defina KEYCLOAK_ADMIN_USER no .env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?defina KEYCLOAK_ADMIN_PASSWORD no .env}
+      # Lidas pelo realm-pedidos.json (placeholders ${...}) na importação
+      KC_DEMO_USER_PASSWORD: ${KC_DEMO_USER_PASSWORD:?defina KC_DEMO_USER_PASSWORD no .env}
+      KC_DEMO_ADMIN_PASSWORD: ${KC_DEMO_ADMIN_PASSWORD:?defina KC_DEMO_ADMIN_PASSWORD no .env}
+      # Endereço público: é o "iss" dos tokens, mesmo quando os serviços buscam as chaves por keycloak:8080
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8080}
+      KC_HEALTH_ENABLED: "true"
+    ports: ["${KEYCLOAK_PORT:-8080}:8080"]
+    volumes: ["./infra/keycloak:/opt/keycloak/data/import:ro"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    image: pedidos-pagamentos/order-service:local
+    environment:
+      DB_URL: jdbc:postgresql://orders-db:5432/orders
+      DB_USERNAME: ${ORDERS_DB_USER}
+      DB_PASSWORD: ${ORDERS_DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/pedidos/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: http://localhost:${KEYCLOAK_PORT:-8080}/realms/pedidos
+    ports: ["8081:8081"]
+    depends_on:
+      orders-db: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    image: pedidos-pagamentos/payment-service:local
+    environment:
+      DB_URL: jdbc:postgresql://payments-db:5432/payments
+      DB_USERNAME: ${PAYMENTS_DB_USER}
+      DB_PASSWORD: ${PAYMENTS_DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/pedidos/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: http://localhost:${KEYCLOAK_PORT:-8080}/realms/pedidos
+      GATEWAY_FAILURE_RATE: ${GATEWAY_FAILURE_RATE:-0}
+      GATEWAY_DECLINE_RATE: ${GATEWAY_DECLINE_RATE:-0}
+      GATEWAY_LATENCY: ${GATEWAY_LATENCY:-50ms}
+      GATEWAY_TIMEOUT: ${GATEWAY_TIMEOUT:-2s}
+    ports: ["8082:8082"]
+    depends_on:
+      payments-db: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes: ["./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+    depends_on: [order-service, payment-service]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?defina GRAFANA_ADMIN_USER no .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?defina GRAFANA_ADMIN_PASSWORD no .env}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/pedidos-pagamentos.json
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+
+volumes:
+  orders-data:
+  payments-data:
+  kafka-data:
