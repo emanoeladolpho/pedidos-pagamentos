@@ -193,10 +193,10 @@ class OrderTest {
         Order original = placedOrder();
         Order restored = Order.restore(original.getId(), original.getCustomerId(), original.getItems(),
                 original.getTotal(), OrderStatus.PAYMENT_PENDING, null, null, original.getCreatedAt(),
-                original.getUpdatedAt(), 3);
+                original.getUpdatedAt(), 3L);
 
         assertThat(restored.pullDomainEvents()).isEmpty();
-        assertThat(restored.getVersion()).isEqualTo(3);
+        assertThat(restored.getVersion()).isEqualTo(3L);
         assertThat(restored.getStatus()).isEqualTo(OrderStatus.PAYMENT_PENDING);
     }
 }

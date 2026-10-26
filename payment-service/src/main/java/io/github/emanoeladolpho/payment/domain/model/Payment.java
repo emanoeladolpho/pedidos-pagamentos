@@ -26,11 +26,12 @@ public class Payment extends AggregateRoot {
     private String gatewayTransactionId;
     private String failureReason;
     private Instant updatedAt;
-    private final long version;
+    /** Versão para lock otimista; nula enquanto o agregado não foi persistido. */
+    private final Long version;
 
     private Payment(PaymentId id, OrderId orderId, CustomerId customerId, Money amount, PaymentStatus status,
                     String gatewayTransactionId, String failureReason, Instant createdAt, Instant updatedAt,
-                    long version) {
+                    Long version) {
         this.id = Objects.requireNonNull(id);
         this.orderId = Objects.requireNonNull(orderId);
         this.customerId = Objects.requireNonNull(customerId);
@@ -49,7 +50,7 @@ public class Payment extends AggregateRoot {
         }
         Instant now = Instant.now();
         Payment payment = new Payment(PaymentId.newId(), orderId, customerId, amount, PaymentStatus.PENDING,
-                null, null, now, now, 0);
+                null, null, now, now, null);
         payment.registerEvent(new PaymentInitiated(UUID.randomUUID(), now, payment.id.toString(),
                 orderId.toString(), amount));
         return payment;
@@ -57,7 +58,7 @@ public class Payment extends AggregateRoot {
 
     public static Payment restore(PaymentId id, OrderId orderId, CustomerId customerId, Money amount,
                                   PaymentStatus status, String gatewayTransactionId, String failureReason,
-                                  Instant createdAt, Instant updatedAt, long version) {
+                                  Instant createdAt, Instant updatedAt, Long version) {
         return new Payment(id, orderId, customerId, amount, status, gatewayTransactionId, failureReason,
                 createdAt, updatedAt, version);
     }
@@ -146,7 +147,7 @@ public class Payment extends AggregateRoot {
         return updatedAt;
     }
 
-    public long getVersion() {
+    public Long getVersion() {
         return version;
     }
 }

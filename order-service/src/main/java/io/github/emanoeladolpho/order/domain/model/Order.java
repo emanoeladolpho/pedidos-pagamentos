@@ -29,10 +29,11 @@ public class Order extends AggregateRoot {
     private String failureReason;
     private String cancellationReason;
     private Instant updatedAt;
-    private final long version;
+    /** Versão para lock otimista; nula enquanto o agregado não foi persistido. */
+    private final Long version;
 
     private Order(OrderId id, CustomerId customerId, List<OrderItem> items, Money total, OrderStatus status,
-                  String failureReason, String cancellationReason, Instant createdAt, Instant updatedAt, long version) {
+                  String failureReason, String cancellationReason, Instant createdAt, Instant updatedAt, Long version) {
         this.id = Objects.requireNonNull(id);
         this.customerId = Objects.requireNonNull(customerId);
         this.items = List.copyOf(items);
@@ -53,7 +54,7 @@ public class Order extends AggregateRoot {
                 .reduce(Money.zero(items.getFirst().unitPrice().currency()), Money::add);
         Instant now = Instant.now();
         Order order = new Order(OrderId.newId(), customerId, items, total, OrderStatus.CREATED,
-                null, null, now, now, 0);
+                null, null, now, now, null);
         order.registerEvent(new OrderCreated(UUID.randomUUID(), now, order.id.toString(),
                 customerId.value(), order.items, total));
         return order;
@@ -62,7 +63,7 @@ public class Order extends AggregateRoot {
     /** Reconstrói um pedido já persistido (não gera eventos). */
     public static Order restore(OrderId id, CustomerId customerId, List<OrderItem> items, Money total,
                                 OrderStatus status, String failureReason, String cancellationReason,
-                                Instant createdAt, Instant updatedAt, long version) {
+                                Instant createdAt, Instant updatedAt, Long version) {
         return new Order(id, customerId, items, total, status, failureReason, cancellationReason,
                 createdAt, updatedAt, version);
     }
@@ -192,7 +193,7 @@ public class Order extends AggregateRoot {
         return updatedAt;
     }
 
-    public long getVersion() {
+    public Long getVersion() {
         return version;
     }
 }

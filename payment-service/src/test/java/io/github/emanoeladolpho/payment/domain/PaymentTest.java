@@ -106,10 +106,10 @@ class PaymentTest {
     @Test
     void restoreAndOwnership() {
         Payment payment = Payment.restore(pending().getId(), ORDER, CUSTOMER, new Money(BigDecimal.TEN, "BRL"),
-                PaymentStatus.APPROVED, "gw", null, java.time.Instant.now(), java.time.Instant.now(), 2);
+                PaymentStatus.APPROVED, "gw", null, java.time.Instant.now(), java.time.Instant.now(), 2L);
 
         assertThat(payment.pullDomainEvents()).isEmpty();
-        assertThat(payment.getVersion()).isEqualTo(2);
+        assertThat(payment.getVersion()).isEqualTo(2L);
         assertThat(payment.belongsTo(CUSTOMER)).isTrue();
         assertThat(payment.belongsTo(new CustomerId("outro"))).isFalse();
     }
