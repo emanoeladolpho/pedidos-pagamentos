@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-orders
+      author: emanoeladolpho
+      changes:
+        - createTable:
+            tableName: orders
+            columns:
+              - column: { name: id, type: UUID, constraints: { primaryKey: true } }
+              - column: { name: customer_id, type: VARCHAR(64), constraints: { nullable: false } }
+              - column: { name: status, type: VARCHAR(20), constraints: { nullable: false } }
+              - column: { name: total_amount, type: "NUMERIC(12,2)", constraints: { nullable: false } }
+              - column: { name: currency, type: VARCHAR(3), constraints: { nullable: false } }
+              - column: { name: failure_reason, type: VARCHAR(500) }
+              - column: { name: cancellation_reason, type: VARCHAR(500) }
+              - column: { name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: { nullable: false } }
+              - column: { name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: { nullable: false } }
+              - column: { name: version, type: BIGINT, constraints: { nullable: false } }
+        - sql:
+            sql: >
+              ALTER TABLE orders
+                ADD CONSTRAINT ck_orders_status
+                  CHECK (status IN ('CREATED', 'PAYMENT_PENDING', 'PAID', 'FAILED', 'CANCELLED')),
+                ADD CONSTRAINT ck_orders_total CHECK (total_amount >= 0)
+        - createIndex:
+            tableName: orders
+            indexName: ix_orders_customer_created
+            columns:
+              - column: { name: customer_id }
+              - column: { name: created_at }
+        - createTable:
+            tableName: order_items
+            columns:
+              - column:
+                  name: order_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_order_items_order, references: orders(id), deleteCascade: true }
+              - column: { name: position, type: INT, constraints: { nullable: false } }
+              - column: { name: sku, type: VARCHAR(40), constraints: { nullable: false } }
+              - column: { name: product_name, type: VARCHAR(120), constraints: { nullable: false } }
+              - column: { name: unit_price, type: "NUMERIC(12,2)", constraints: { nullable: false } }
+              - column: { name: quantity, type: INT, constraints: { nullable: false } }
+        - addPrimaryKey:
+            tableName: order_items
+            columnNames: order_id, position
+            constraintName: pk_order_items

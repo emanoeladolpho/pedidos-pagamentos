@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-idempotency-keys
+      author: emanoeladolpho
+      changes:
+        - createTable:
+            tableName: idempotency_keys
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: customer_id, type: VARCHAR(64), constraints: { nullable: false } }
+              - column: { name: idempotency_key, type: VARCHAR(100), constraints: { nullable: false } }
+              - column: { name: request_hash, type: VARCHAR(64), constraints: { nullable: false } }
+              - column:
+                  name: order_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_idempotency_keys_order, references: orders(id) }
+              - column: { name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: { nullable: false } }
+        - addUniqueConstraint:
+            tableName: idempotency_keys
+            columnNames: customer_id, idempotency_key
+            constraintName: uk_idempotency_keys_customer_key
